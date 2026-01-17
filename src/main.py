@@ -3,6 +3,7 @@
 
 import sys
 import os
+import tempfile
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QGroupBox, QLabel, QLineEdit, QFileDialog, QSlider, 
@@ -17,6 +18,49 @@ from loguru import logger
 
 # 配置日志
 logger.add("logs/app.log", rotation="500 MB", level="INFO", encoding="utf-8")
+
+# 获取默认保存路径
+
+def get_default_save_path(subdir=None):
+    """
+    根据操作系统类型获取默认保存路径
+    - macOS/Linux: 系统临时目录
+    - Windows: D盘根目录
+    """
+    platform = sys.platform
+    
+    if platform.startswith('win'):
+        # Windows系统，使用D盘根目录
+        base_path = "D:/"
+    else:
+        # macOS或Linux系统，使用系统临时目录
+        base_path = tempfile.gettempdir()
+    
+    # 如果指定了子目录，则拼接完整路径
+    if subdir:
+        base_path = os.path.join(base_path, subdir)
+    
+    return base_path
+
+# 检查并创建路径
+def ensure_path_exists(path):
+    """
+    检查路径是否存在，如果不存在则创建
+    如果路径不可写则抛出异常
+    """
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+            logger.info(f"创建目录: {path}")
+        
+        # 检查路径是否可写
+        if not os.access(path, os.W_OK):
+            raise PermissionError(f"路径不可写: {path}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"处理路径 {path} 时出错: {e}")
+        raise
 
 class VideoRecorderThread(QThread):
     frame_signal = pyqtSignal(np.ndarray)
@@ -42,8 +86,8 @@ class VideoRecorderThread(QThread):
             width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
-            # 创建保存目录
-            os.makedirs(self.save_path, exist_ok=True)
+            # 检查并创建保存目录
+            ensure_path_exists(self.save_path)
             
             # 生成文件名
             filename = os.path.join(self.save_path, f"record_{os.getpid()}.mp4")
@@ -106,8 +150,8 @@ class ImageExtractorThread(QThread):
                 logger.warning(f"视频帧数不足，仅能提取{total_frames}张图像")
                 self.num_images = total_frames
             
-            # 创建保存目录
-            os.makedirs(self.save_path, exist_ok=True)
+            # 检查并创建保存目录
+            ensure_path_exists(self.save_path)
             
             # 随机选择帧
             frame_indices = np.random.choice(total_frames, self.num_images, replace=False)
@@ -360,7 +404,7 @@ class MainWindow(QMainWindow):
         # 保存路径
         path_layout = QHBoxLayout()
         path_layout.addWidget(QLabel("保存路径:"))
-        self.video_save_path = QLineEdit("./videos")
+        self.video_save_path = QLineEdit(get_default_save_path("videos"))
         path_layout.addWidget(self.video_save_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_video_save_path)
@@ -377,7 +421,8 @@ class MainWindow(QMainWindow):
         # 视频文件选择
         video_layout = QHBoxLayout()
         video_layout.addWidget(QLabel("视频文件:"))
-        self.video_file_path = QLineEdit()
+        # 设置视频文件默认路径为视频录制的保存路径
+        self.video_file_path = QLineEdit(get_default_save_path("videos"))
         video_layout.addWidget(self.video_file_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_video_file)
@@ -387,7 +432,7 @@ class MainWindow(QMainWindow):
         # 图像保存路径
         save_layout = QHBoxLayout()
         save_layout.addWidget(QLabel("保存路径:"))
-        self.image_save_path = QLineEdit("./images")
+        self.image_save_path = QLineEdit(get_default_save_path("images"))
         save_layout.addWidget(self.image_save_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_image_save_path)
@@ -427,7 +472,7 @@ class MainWindow(QMainWindow):
         # 图像文件夹
         img_layout = QHBoxLayout()
         img_layout.addWidget(QLabel("图像文件夹:"))
-        self.annotation_img_path = QLineEdit("./images")
+        self.annotation_img_path = QLineEdit(get_default_save_path("images"))
         img_layout.addWidget(self.annotation_img_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_annotation_img_path)
@@ -437,7 +482,7 @@ class MainWindow(QMainWindow):
         # 标签保存路径
         lbl_layout = QHBoxLayout()
         lbl_layout.addWidget(QLabel("标签保存路径:"))
-        self.annotation_lbl_path = QLineEdit("./labels")
+        self.annotation_lbl_path = QLineEdit(get_default_save_path("labels"))
         lbl_layout.addWidget(self.annotation_lbl_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_annotation_lbl_path)
@@ -453,7 +498,7 @@ class MainWindow(QMainWindow):
         # 图像文件夹
         img_layout = QHBoxLayout()
         img_layout.addWidget(QLabel("图像文件夹:"))
-        self.split_img_path = QLineEdit("./images")
+        self.split_img_path = QLineEdit(get_default_save_path("images"))
         img_layout.addWidget(self.split_img_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_split_img_path)
@@ -463,7 +508,7 @@ class MainWindow(QMainWindow):
         # 标签文件夹
         lbl_layout = QHBoxLayout()
         lbl_layout.addWidget(QLabel("标签文件夹:"))
-        self.split_lbl_path = QLineEdit("./labels")
+        self.split_lbl_path = QLineEdit(get_default_save_path("labels"))
         lbl_layout.addWidget(self.split_lbl_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_split_lbl_path)
@@ -473,7 +518,7 @@ class MainWindow(QMainWindow):
         # 输出目录
         out_layout = QHBoxLayout()
         out_layout.addWidget(QLabel("输出目录:"))
-        self.split_output_path = QLineEdit("./dataset")
+        self.split_output_path = QLineEdit(get_default_save_path("dataset"))
         out_layout.addWidget(self.split_output_path)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_split_output_path)
@@ -606,57 +651,85 @@ class MainWindow(QMainWindow):
         layout.addWidget(group)
     
     def browse_video_save_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择视频保存路径")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.video_save_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择视频保存路径", current_path)
         if path:
             self.video_save_path.setText(path)
     
     def browse_video_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择视频文件", "", "视频文件 (*.mp4 *.avi *.mov)")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.video_file_path.text()
+        path, _ = QFileDialog.getOpenFileName(self, "选择视频文件", current_path, "视频文件 (*.mp4 *.avi *.mov)")
         if path:
             self.video_file_path.setText(path)
     
     def browse_image_save_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择图像保存路径")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.image_save_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择图像保存路径", current_path)
         if path:
             self.image_save_path.setText(path)
     
     def browse_annotation_img_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择图像文件夹")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.annotation_img_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择图像文件夹", current_path)
         if path:
             self.annotation_img_path.setText(path)
     
     def browse_annotation_lbl_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择标签保存路径")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.annotation_lbl_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择标签保存路径", current_path)
         if path:
             self.annotation_lbl_path.setText(path)
     
     def browse_split_img_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择图像文件夹")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.split_img_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择图像文件夹", current_path)
         if path:
             self.split_img_path.setText(path)
     
     def browse_split_lbl_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择标签文件夹")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.split_lbl_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择标签文件夹", current_path)
         if path:
             self.split_lbl_path.setText(path)
     
     def browse_split_output_path(self):
-        path = QFileDialog.getExistingDirectory(self, "选择输出目录")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.split_output_path.text()
+        path = QFileDialog.getExistingDirectory(self, "选择输出目录", current_path)
         if path:
             self.split_output_path.setText(path)
     
     def browse_yolo_data_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择数据配置文件", "", "YAML文件 (*.yaml *.yml)")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.yolo_data_file.text()
+        # 获取文件所在目录作为默认路径
+        default_dir = os.path.dirname(current_path) if os.path.exists(current_path) else current_path
+        path, _ = QFileDialog.getOpenFileName(self, "选择数据配置文件", default_dir, "YAML文件 (*.yaml *.yml)")
         if path:
             self.yolo_data_file.setText(path)
     
     def browse_yolo_model_config(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择模型配置文件", "", "YAML文件 (*.yaml *.yml)")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.yolo_model_config.text()
+        # 获取文件所在目录作为默认路径
+        default_dir = os.path.dirname(current_path) if os.path.exists(current_path) else current_path
+        path, _ = QFileDialog.getOpenFileName(self, "选择模型配置文件", default_dir, "YAML文件 (*.yaml *.yml)")
         if path:
             self.yolo_model_config.setText(path)
     
     def browse_yolo_weights(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择预训练权重", "", "权重文件 (*.pt)")
+        # 使用当前输入框中的路径作为默认路径
+        current_path = self.yolo_weights.text()
+        # 获取文件所在目录作为默认路径
+        default_dir = os.path.dirname(current_path) if os.path.exists(current_path) else current_path
+        path, _ = QFileDialog.getOpenFileName(self, "选择预训练权重", default_dir, "权重文件 (*.pt)")
         if path:
             self.yolo_weights.setText(path)
     
@@ -745,10 +818,10 @@ class MainWindow(QMainWindow):
             return
         
         # 创建标签文件夹
-        os.makedirs(lbl_path, exist_ok=True)
-        
-        # 调用labelImg工具
         try:
+            ensure_path_exists(lbl_path)
+            
+            # 调用labelImg工具
             import subprocess
             command = f"labelImg {img_path}"
             subprocess.Popen(command, shell=True)
