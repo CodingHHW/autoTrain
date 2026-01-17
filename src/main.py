@@ -750,7 +750,7 @@ class MainWindow(QMainWindow):
         # 调用labelImg工具
         try:
             import subprocess
-            command = f"labelImg {img_path} {lbl_path}"
+            command = f"labelImg {img_path}"
             subprocess.Popen(command, shell=True)
             self.append_status(f"启动labelImg，图像路径：{img_path}，标签路径：{lbl_path}")
         except Exception as e:
