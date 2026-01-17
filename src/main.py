@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
         fps_layout.addWidget(QLabel("帧率:"))
         self.fps_spin = QSpinBox()
         self.fps_spin.setRange(1, 60)
-        self.fps_spin.setValue(25)
+        self.fps_spin.setValue(5)  # 将默认帧率设置为5
         fps_layout.addWidget(self.fps_spin)
         param_layout.addLayout(fps_layout)
         
