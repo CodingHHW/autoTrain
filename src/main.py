@@ -317,7 +317,10 @@ class MainWindow(QMainWindow):
     
     def init_ui(self):
         self.setWindowTitle("视频处理与模型训练集成软件")
-        self.setGeometry(100, 100, 1200, 800)
+        # 设置窗口为全屏
+        self.showFullScreen()
+        # 保存原始窗口状态，便于后续切换
+        self.is_fullscreen = True
         
         # 创建主布局
         main_widget = QWidget()
@@ -905,6 +908,23 @@ class MainWindow(QMainWindow):
         # 自动滚动到底部
         scroll_bar = self.status_text.verticalScrollBar()
         scroll_bar.setValue(scroll_bar.maximum())
+    
+    def keyPressEvent(self, event):
+        # 处理键盘事件，F11键切换全屏/窗口模式
+        if event.key() == Qt.Key_F11:
+            self.toggle_fullscreen()
+    
+    def toggle_fullscreen(self):
+        # 切换全屏/窗口模式
+        if self.is_fullscreen:
+            # 从全屏切换到窗口模式
+            self.showNormal()
+            self.setGeometry(100, 100, 1200, 800)
+            self.is_fullscreen = False
+        else:
+            # 从窗口模式切换到全屏
+            self.showFullScreen()
+            self.is_fullscreen = True
     
     def closeEvent(self, event):
         # 关闭前停止所有线程
