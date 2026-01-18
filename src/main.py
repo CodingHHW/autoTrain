@@ -197,10 +197,41 @@ class DatasetSplitterThread(QThread):
     
     def run(self):
         try:
+            import shutil
+            
+            # 清空输出目录下的images和labels文件夹，避免训练数据被污染
+            logger.info(f"开始清空输出目录：{self.output_dir}")
+            
+            # 清空images目录
+            images_dir = os.path.join(self.output_dir, "images")
+            if os.path.exists(images_dir):
+                shutil.rmtree(images_dir)
+                logger.info(f"已清空目录：{images_dir}")
+            
+            # 清空labels目录
+            labels_dir = os.path.join(self.output_dir, "labels")
+            if os.path.exists(labels_dir):
+                shutil.rmtree(labels_dir)
+                logger.info(f"已清空目录：{labels_dir}")
+            
             # 获取所有图像文件
-            image_files = [f for f in os.listdir(self.images_dir) if f.endswith((".jpg", ".jpeg", ".png"))]
-            if not image_files:
+            all_image_files = [f for f in os.listdir(self.images_dir) if f.endswith((".jpg", ".jpeg", ".png"))]
+            if not all_image_files:
                 self.finished_signal.emit("错误：未找到图像文件")
+                return
+            
+            # 过滤掉没有对应标签文件的图像
+            image_files = []
+            for img_file in all_image_files:
+                # 生成对应的标签文件名
+                label_file = os.path.splitext(img_file)[0] + ".txt"
+                label_path = os.path.join(self.labels_dir, label_file)
+                # 只保留有对应标签文件的图像
+                if os.path.exists(label_path):
+                    image_files.append(img_file)
+            
+            if not image_files:
+                self.finished_signal.emit("错误：未找到有对应标签的图像文件")
                 return
             
             # 打乱顺序
@@ -215,6 +246,8 @@ class DatasetSplitterThread(QThread):
             for split in ["train", "val", "test"]:
                 os.makedirs(os.path.join(self.output_dir, "images", split), exist_ok=True)
                 os.makedirs(os.path.join(self.output_dir, "labels", split), exist_ok=True)
+            
+            logger.info(f"输出目录结构创建完成：{self.output_dir}")
             
             # 划分数据集
             splits = {
