@@ -610,79 +610,10 @@ class MainWindow(QMainWindow):
         group = QGroupBox("YOLO训练")
         group_layout = QVBoxLayout(group)
         
-        # 数据配置文件
-        data_layout = QHBoxLayout()
-        data_layout.addWidget(QLabel("数据配置文件:"))
-        self.yolo_data_file = QLineEdit("./data.yaml")
-        data_layout.addWidget(self.yolo_data_file)
-        browse_btn = QPushButton("浏览")
-        browse_btn.clicked.connect(self.browse_yolo_data_file)
-        data_layout.addWidget(browse_btn)
-        group_layout.addLayout(data_layout)
-        
-        # 模型配置
-        model_layout = QHBoxLayout()
-        model_layout.addWidget(QLabel("模型配置:"))
-        self.yolo_model_config = QLineEdit("yolov11n.yaml")
-        model_layout.addWidget(self.yolo_model_config)
-        browse_btn = QPushButton("浏览")
-        browse_btn.clicked.connect(self.browse_yolo_model_config)
-        model_layout.addWidget(browse_btn)
-        group_layout.addLayout(model_layout)
-        
-        # 预训练权重
-        weights_layout = QHBoxLayout()
-        weights_layout.addWidget(QLabel("预训练权重:"))
-        self.yolo_weights = QLineEdit("yolov11n.pt")
-        weights_layout.addWidget(self.yolo_weights)
-        browse_btn = QPushButton("浏览")
-        browse_btn.clicked.connect(self.browse_yolo_weights)
-        weights_layout.addWidget(browse_btn)
-        group_layout.addLayout(weights_layout)
-        
-        # 训练参数
-        param_layout = QVBoxLayout()
-        
-        # 迭代次数
-        epochs_layout = QHBoxLayout()
-        epochs_layout.addWidget(QLabel("迭代次数:"))
-        self.yolo_epochs = QSpinBox()
-        self.yolo_epochs.setRange(1, 1000)
-        self.yolo_epochs.setValue(50)
-        epochs_layout.addWidget(self.yolo_epochs)
-        param_layout.addLayout(epochs_layout)
-        
-        # 批处理大小
-        batch_layout = QHBoxLayout()
-        batch_layout.addWidget(QLabel("批处理大小:"))
-        self.yolo_batch = QSpinBox()
-        self.yolo_batch.setRange(1, 64)
-        self.yolo_batch.setValue(16)
-        batch_layout.addWidget(self.yolo_batch)
-        param_layout.addLayout(batch_layout)
-        
-        # 学习率
-        lr_layout = QHBoxLayout()
-        lr_layout.addWidget(QLabel("学习率:"))
-        self.yolo_lr = QDoubleSpinBox()
-        self.yolo_lr.setRange(0.0001, 0.1)
-        self.yolo_lr.setValue(0.001)
-        self.yolo_lr.setDecimals(5)
-        lr_layout.addWidget(self.yolo_lr)
-        param_layout.addLayout(lr_layout)
-        
-        group_layout.addLayout(param_layout)
-        
-        # 训练按钮
+        # 只保留一个启动训练的按钮
         self.train_btn = QPushButton("开始训练")
         self.train_btn.clicked.connect(self.start_yolo_training)
         group_layout.addWidget(self.train_btn)
-        
-        # 停止按钮
-        self.stop_train_btn = QPushButton("停止训练")
-        self.stop_train_btn.clicked.connect(self.stop_yolo_training)
-        self.stop_train_btn.setEnabled(False)
-        group_layout.addWidget(self.stop_train_btn)
         
         layout.addWidget(group)
     
@@ -915,35 +846,34 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "提示", message)
     
     def start_yolo_training(self):
-        data_file = self.yolo_data_file.text()
-        epochs = self.yolo_epochs.value()
-        batch_size = self.yolo_batch.value()
-        lr = self.yolo_lr.value()
-        model_config = self.yolo_model_config.text()
-        pretrained_weights = self.yolo_weights.text()
-        
-        if not os.path.exists(data_file):
-            QMessageBox.warning(self, "警告", "请选择有效的数据配置文件")
-            return
-        
-        self.yolo_trainer = YOLO_trainerThread(data_file, epochs, batch_size, lr, model_config, pretrained_weights)
-        self.yolo_trainer.output_signal.connect(self.append_status)
-        self.yolo_trainer.finished_signal.connect(self.yolo_training_finished)
-        self.yolo_trainer.start()
-        
-        self.train_btn.setEnabled(False)
-        self.stop_train_btn.setEnabled(True)
-        self.append_status("开始YOLO训练...")
-    
-    def stop_yolo_training(self):
-        if self.yolo_trainer:
-            self.yolo_trainer.stop()
-            self.append_status("停止YOLO训练...")
-    
-    def yolo_training_finished(self):
-        self.train_btn.setEnabled(True)
-        self.stop_train_btn.setEnabled(False)
-        self.append_status("YOLO训练结束")
+        """
+        启动Windows批处理脚本进行YOLO训练
+        """
+        try:
+            import subprocess
+            import platform
+            
+            # 检查是否为Windows系统
+            if platform.system() != "Windows":
+                QMessageBox.warning(self, "警告", "此功能仅支持Windows系统")
+                return
+            
+            # 创建批处理脚本路径
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "train_yolo.bat")
+            
+            # 检查脚本是否存在
+            if not os.path.exists(script_path):
+                QMessageBox.critical(self, "错误", f"批处理脚本不存在：{script_path}")
+                return
+            
+            # 启动批处理脚本
+            subprocess.Popen([script_path], shell=True)
+            
+            self.append_status("已启动YOLO训练批处理脚本")
+            QMessageBox.information(self, "提示", "YOLO训练脚本已启动，请查看Anaconda PowerShell终端")
+        except Exception as e:
+            logger.error(f"启动YOLO训练脚本失败：{e}")
+            QMessageBox.critical(self, "错误", f"启动YOLO训练脚本失败：{str(e)}")
     
     def append_status(self, message):
         self.status_text.append(message)
@@ -981,10 +911,6 @@ class MainWindow(QMainWindow):
         if self.dataset_splitter:
             self.dataset_splitter.terminate()
             self.dataset_splitter.wait()
-        
-        if self.yolo_trainer:
-            self.yolo_trainer.stop()
-            self.yolo_trainer.wait()
         
         event.accept()
 
