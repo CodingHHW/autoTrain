@@ -832,8 +832,10 @@ class MainWindow(QMainWindow):
             ensure_path_exists(lbl_path)
             
             # 调用labelImg工具，指定图像目录和标签保存目录
+            # 正确的参数顺序：image_dir [class_file] [save_dir]
+            # 使用默认的类别文件，第三个参数指定为标签保存路径
             import subprocess
-            command = f"labelImg {img_path} {lbl_path}"
+            command = f"labelImg {img_path} '' {lbl_path}"
             subprocess.Popen(command, shell=True)
             self.append_status(f"启动labelImg，图像路径：{img_path}，标签路径：{lbl_path}")
         except Exception as e:
