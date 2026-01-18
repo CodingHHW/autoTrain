@@ -4,6 +4,7 @@
 import sys
 import os
 import tempfile
+import datetime
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QGroupBox, QLabel, QLineEdit, QFileDialog, QSlider, 
@@ -90,7 +91,9 @@ class VideoRecorderThread(QThread):
             ensure_path_exists(self.save_path)
             
             # 生成文件名
-            filename = os.path.join(self.save_path, f"record_{os.getpid()}.mp4")
+            # 使用时间戳生成文件名，格式：YYYYMMDD_HHMMSS.mp4
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(self.save_path, f"record_{timestamp}.mp4")
             
             # 创建视频写入对象
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
