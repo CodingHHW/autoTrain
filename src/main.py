@@ -266,14 +266,14 @@ class DatasetSplitterThread(QThread):
                     # 复制图像文件
                     src_img = os.path.join(self.images_dir, file)
                     dst_img = os.path.join(self.output_dir, "images", split_name, file)
-                    os.system(f"cp {src_img} {dst_img}")
+                    shutil.copy(src_img, dst_img)
                     
                     # 复制标签文件
                     label_file = os.path.splitext(file)[0] + ".txt"
                     src_label = os.path.join(self.labels_dir, label_file)
                     if os.path.exists(src_label):
                         dst_label = os.path.join(self.output_dir, "labels", split_name, label_file)
-                        os.system(f"cp {src_label} {dst_label}")
+                        shutil.copy(src_label, dst_label)
                     
                     processed += 1
                     progress = int((processed / total) * 100)
