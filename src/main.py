@@ -802,7 +802,17 @@ class MainWindow(QMainWindow):
             # 正确的参数顺序：image_dir [class_file] [save_dir]
             # 使用默认的类别文件，第三个参数指定为标签保存路径
             import subprocess
-            command = f"labelImg {img_path} '' {lbl_path}"
+            import platform
+            
+            # 检查是否为Windows系统
+            if platform.system() == "Windows":
+                # 使用虚拟环境中的labelImg可执行文件完整路径
+                labelimg_path = "C:\\ProgramData\\miniconda3\\envs\\yolo\\Scripts\\labelImg.exe"
+                command = f"\"{labelimg_path}\" {img_path} '' {lbl_path}"
+            else:
+                # 非Windows系统使用命令行调用
+                command = f"labelImg {img_path} '' {lbl_path}"
+            
             subprocess.Popen(command, shell=True)
             self.append_status(f"启动labelImg，图像路径：{img_path}，标签路径：{lbl_path}")
         except Exception as e:
