@@ -262,7 +262,7 @@ class YOLO_trainerThread(QThread):
     output_signal = pyqtSignal(str)
     finished_signal = pyqtSignal()
     
-    def __init__(self, data_file, epochs=50, batch_size=16, lr=0.001, model_config="yolov8n.yaml", pretrained_weights="yolov8n.pt"):
+    def __init__(self, data_file, epochs=50, batch_size=16, lr=0.001, model_config="yolov11n.yaml", pretrained_weights="yolov11n.pt"):
         super().__init__()
         self.data_file = data_file
         self.epochs = epochs
@@ -590,7 +590,7 @@ class MainWindow(QMainWindow):
         # 模型配置
         model_layout = QHBoxLayout()
         model_layout.addWidget(QLabel("模型配置:"))
-        self.yolo_model_config = QLineEdit("yolov8n.yaml")
+        self.yolo_model_config = QLineEdit("yolov11n.yaml")
         model_layout.addWidget(self.yolo_model_config)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_yolo_model_config)
@@ -600,7 +600,7 @@ class MainWindow(QMainWindow):
         # 预训练权重
         weights_layout = QHBoxLayout()
         weights_layout.addWidget(QLabel("预训练权重:"))
-        self.yolo_weights = QLineEdit("yolov8n.pt")
+        self.yolo_weights = QLineEdit("yolov11n.pt")
         weights_layout.addWidget(self.yolo_weights)
         browse_btn = QPushButton("浏览")
         browse_btn.clicked.connect(self.browse_yolo_weights)
