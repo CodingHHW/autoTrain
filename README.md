@@ -71,19 +71,19 @@ pip install -r requirements.txt
 
 ```bash
 # 安装PyQt5
-pip install PyQt5==5.15.9 PyQt5-Qt5==5.15.2 PyQt5-sip==12.12.2
+pip install PyQt5==5.15.2
 
 # 安装OpenCV
-pip install opencv-python==4.8.1.78
+pip install opencv-python>=4.8.1.78
 
 # 安装numpy
-pip install numpy==1.25.2
+pip install numpy>=1.26.4
 
-# 安装YOLO库
-pip install ultralytics==8.0.220
+# 安装YOLO库（支持YOLO11）
+pip install ultralytics>=8.1.0
 
 # 安装其他依赖
-pip install matplotlib==3.8.0 pillow==10.1.0 pyyaml==6.0.1 loguru==0.7.2
+pip install matplotlib>=3.8.0 pillow>=10.1.0 pyyaml>=6.0.1 loguru>=0.7.2
 ```
 
 ## 软件运行
@@ -112,7 +112,7 @@ python src/main.py
 ### 1. 视频录制
 
 1. 在左侧"视频录制"模块中，设置录制参数：
-   - 调整帧率（默认25fps）
+   - 调整帧率（默认5fps）
    - 选择视频保存路径
 2. 点击"录制视频"按钮开始录制
 3. 可点击"暂停"/"继续"按钮控制录制过程
@@ -156,8 +156,8 @@ python src/main.py
 
 1. 准备YOLO训练所需文件：
    - 数据配置文件（data.yaml）
-   - 模型配置文件（如yolov8n.yaml）
-   - 预训练权重（可选，如yolov8n.pt）
+   - 模型配置文件（如yolov11n.yaml，默认使用YOLO11）
+   - 预训练权重（可选，如yolov11n.pt）
 2. 在左侧"YOLO训练"模块中：
    - 选择数据配置文件
    - 选择模型配置文件
@@ -225,6 +225,14 @@ autoTrain/
 如遇其他问题，请查看日志文件`logs/app.log`获取详细错误信息，或联系技术支持。
 
 ## 版本更新
+
+### v1.1.0
+- 将YOLO默认模型从YOLOv8升级为YOLO11
+- 更新ultralytics库版本要求至>=8.1.0以支持YOLO11
+- 将视频录制默认帧率从25fps调整为5fps，节省存储空间
+- 修复了视频录制时视频流窗口大小变化问题
+- 修复了窗口显示模式，从默认全屏改回固定尺寸
+- 优化了浏览功能，点击浏览时默认显示当前设置路径
 
 ### v1.0.0
 - 初始版本发布
