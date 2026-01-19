@@ -67,10 +67,12 @@ class VideoRecorderThread(QThread):
     frame_signal = pyqtSignal(np.ndarray)
     finished_signal = pyqtSignal()
     
-    def __init__(self, fps=25, save_path="./videos"):
+    def __init__(self, fps=25, save_path="./videos", width=None, height=None):
         super().__init__()
         self.fps = fps
         self.save_path = save_path
+        self.width = width
+        self.height = height
         self.is_recording = False
         self.is_paused = False
         self.cap = None
@@ -83,9 +85,18 @@ class VideoRecorderThread(QThread):
                 logger.error("无法打开摄像头")
                 return
             
-            # 获取摄像头分辨率
-            width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            # 获取摄像头分辨率，如果用户指定了分辨率则使用用户指定的值
+            cam_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            cam_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            # 使用用户指定的分辨率或摄像头默认分辨率
+            width = self.width if self.width is not None else cam_width
+            height = self.height if self.height is not None else cam_height
+            
+            # 如果用户指定了分辨率，设置摄像头分辨率
+            if self.width is not None and self.height is not None:
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
             
             # 检查并创建保存目录
             ensure_path_exists(self.save_path)
@@ -440,6 +451,20 @@ class MainWindow(QMainWindow):
         fps_layout.addWidget(self.fps_spin)
         param_layout.addLayout(fps_layout)
         
+        # 分辨率设置
+        resolution_layout = QHBoxLayout()
+        resolution_layout.addWidget(QLabel("分辨率:"))
+        self.resolution_combo = QComboBox()
+        # 添加常见分辨率选项，格式："宽度x高度"，存储值："宽度,高度"
+        self.resolution_combo.addItem("默认分辨率", "0,0")
+        self.resolution_combo.addItem("640x480 (VGA)", "640,480")
+        self.resolution_combo.addItem("1280x720 (720P)", "1280,720")
+        self.resolution_combo.addItem("1920x1080 (1080P)", "1920,1080")
+        self.resolution_combo.addItem("2560x1440 (2K)", "2560,1440")
+        self.resolution_combo.addItem("3840x2160 (4K)", "3840,2160")
+        resolution_layout.addWidget(self.resolution_combo)
+        param_layout.addLayout(resolution_layout)
+        
         # 保存路径
         path_layout = QHBoxLayout()
         path_layout.addWidget(QLabel("保存路径:"))
@@ -707,7 +732,13 @@ class MainWindow(QMainWindow):
         fps = self.fps_spin.value()
         save_path = self.video_save_path.text()
         
-        self.video_recorder = VideoRecorderThread(fps, save_path)
+        # 获取分辨率选择
+        resolution_str = self.resolution_combo.currentData()
+        width_str, height_str = resolution_str.split(',')
+        width = int(width_str) if width_str != '0' else None
+        height = int(height_str) if height_str != '0' else None
+        
+        self.video_recorder = VideoRecorderThread(fps, save_path, width, height)
         self.video_recorder.frame_signal.connect(self.update_video_frame)
         self.video_recorder.finished_signal.connect(self.video_recording_finished)
         self.video_recorder.start_recording()
