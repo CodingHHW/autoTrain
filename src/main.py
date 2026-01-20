@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QSpinBox, QDoubleSpinBox, QProgressBar, QTextEdit, QMessageBox,
     QSplitter, QComboBox
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QPixmap, QImage
 import cv2
 import numpy as np
@@ -780,16 +780,17 @@ class MainWindow(QMainWindow):
         q_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(q_image)
         
-        # 保存视频标签的原始大小，确保视频显示区域大小固定
-        if not hasattr(self, 'original_video_label_size'):
-            self.original_video_label_size = self.video_label.size()
+        # 获取当前视频标签的大小（随窗口变化）
+        current_size = self.video_label.size()
         
-        # 缩放图像以适应固定大小的标签，保持宽高比
-        scaled_pixmap = pixmap.scaled(self.original_video_label_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        # 缩放图像以适应当前窗口大小，铺满整个窗口
+        scaled_pixmap = pixmap.scaled(current_size, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
         self.video_label.setPixmap(scaled_pixmap)
         
-        # 确保视频标签大小保持不变
-        self.video_label.setFixedSize(self.original_video_label_size)
+        # 移除固定大小限制，允许视频标签随窗口大小变化
+        if hasattr(self, 'original_video_label_size'):
+            delattr(self, 'original_video_label_size')
+        self.video_label.setFixedSize(QSize())
     
     def start_image_extraction(self):
         video_path = self.video_file_path.text()
