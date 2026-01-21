@@ -451,20 +451,11 @@ class MainWindow(QMainWindow):
         self.root_path = QLineEdit(get_default_save_path())
         path_layout.addWidget(self.root_path)
         
-        # 保存和刷新按钮
-        button_layout = QHBoxLayout()
-        
         # 保存按钮
         save_btn = QPushButton("保存")
         save_btn.clicked.connect(self.save_root_path)
-        button_layout.addWidget(save_btn)
+        path_layout.addWidget(save_btn)
         
-        # 刷新按钮
-        refresh_btn = QPushButton("刷新")
-        refresh_btn.clicked.connect(self.refresh_root_path)
-        button_layout.addWidget(refresh_btn)
-        
-        path_layout.addLayout(button_layout)
         root_group_layout.addLayout(path_layout)
         
         # 提示信息
@@ -911,10 +902,6 @@ class MainWindow(QMainWindow):
     def update_timer_display(self, timer_str):
         # 更新UI上的计时显示
         self.timer_label.setText(timer_str)
-    
-    def refresh_root_path(self):
-        # 刷新项目根目录显示
-        self.root_path.setText(get_default_save_path())
     
     def save_root_path(self):
         # 保存用户设置的根目录路径
