@@ -66,6 +66,7 @@ def ensure_path_exists(path):
 class VideoRecorderThread(QThread):
     frame_signal = pyqtSignal(np.ndarray)
     finished_signal = pyqtSignal()
+    timer_signal = pyqtSignal(str)  # 用于发送计时信息的信号，格式为"HH:MM:SS"
     
     def __init__(self, fps=25, save_path="./videos", width=None, height=None, auto_save_interval=5):
         super().__init__()
@@ -121,6 +122,7 @@ class VideoRecorderThread(QThread):
             # 创建第一个视频文件
             self.out, self.current_file = create_new_video_file()
             self.start_time = datetime.datetime.now()
+            last_timer_update = datetime.datetime.now()
             
             while self.is_recording:
                 if not self.is_paused:
@@ -140,6 +142,19 @@ class VideoRecorderThread(QThread):
                             # 创建新的视频文件
                             self.out, self.current_file = create_new_video_file()
                             self.start_time = current_time
+                    
+                    # 每秒更新一次计时
+                    current_time = datetime.datetime.now()
+                    if (current_time - last_timer_update).total_seconds() >= 1:
+                        # 计算已录制时间
+                        elapsed = current_time - self.start_time
+                        # 格式化为HH:MM:SS
+                        hours, remainder = divmod(elapsed.total_seconds(), 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        timer_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
+                        # 发送计时信号
+                        self.timer_signal.emit(timer_str)
+                        last_timer_update = current_time
             
             self.finished_signal.emit()
             logger.info("视频录制结束")
@@ -473,6 +488,15 @@ class MainWindow(QMainWindow):
         self.stop_btn.setEnabled(False)
         group_layout.addWidget(self.stop_btn)
         
+        # 计时显示
+        timer_layout = QHBoxLayout()
+        timer_layout.addWidget(QLabel("录制时间："))
+        self.timer_label = QLabel("00:00:00")
+        self.timer_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #333;")
+        timer_layout.addWidget(self.timer_label)
+        timer_layout.addStretch()  # 右对齐
+        group_layout.addLayout(timer_layout)
+        
         # 参数配置
         param_layout = QVBoxLayout()
         
@@ -787,7 +811,11 @@ class MainWindow(QMainWindow):
         self.video_recorder = VideoRecorderThread(fps, save_path, width, height, auto_save_interval)
         self.video_recorder.frame_signal.connect(self.update_video_frame)
         self.video_recorder.finished_signal.connect(self.video_recording_finished)
+        self.video_recorder.timer_signal.connect(self.update_timer_display)
         self.video_recorder.start_recording()
+        
+        # 重置计时显示
+        self.timer_label.setText("00:00:00")
         
         self.record_btn.setEnabled(False)
         self.pause_btn.setEnabled(True)
@@ -817,6 +845,10 @@ class MainWindow(QMainWindow):
     
     def video_recording_finished(self):
         self.append_status("视频录制结束")
+    
+    def update_timer_display(self, timer_str):
+        # 更新UI上的计时显示
+        self.timer_label.setText(timer_str)
     
     def update_video_frame(self, frame):
         # 转换OpenCV帧到Qt图像
