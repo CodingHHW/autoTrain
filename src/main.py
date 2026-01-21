@@ -123,16 +123,25 @@ class VideoRecorderThread(QThread):
             self.out, self.current_file = create_new_video_file()
             self.start_time = datetime.datetime.now()
             last_timer_update = datetime.datetime.now()
+            last_frame_time = datetime.datetime.now()
+            frame_interval = 1.0 / self.fps  # 每帧之间的时间间隔（秒）
             
             while self.is_recording:
                 if not self.is_paused:
                     ret, frame = self.cap.read()
                     if ret:
-                        self.frame_signal.emit(frame)
-                        self.out.write(frame)
+                        current_time = datetime.datetime.now()
+                        
+                        # 计算与上一帧的时间间隔
+                        elapsed_since_last_frame = (current_time - last_frame_time).total_seconds()
+                        
+                        # 只有当时间间隔大于等于设定的帧间隔时，才写入视频文件
+                        if elapsed_since_last_frame >= frame_interval:
+                            self.frame_signal.emit(frame)
+                            self.out.write(frame)
+                            last_frame_time = current_time
                         
                         # 检查是否需要自动保存（切换到新文件）
-                        current_time = datetime.datetime.now()
                         elapsed_minutes = (current_time - self.start_time).total_seconds() / 60
                         if elapsed_minutes >= self.auto_save_interval:
                             # 关闭当前视频文件
