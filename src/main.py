@@ -413,6 +413,14 @@ class MainWindow(QMainWindow):
         self.status_text.setFixedHeight(150)
         right_layout.addWidget(self.status_text)
         
+        # 添加版权声明
+        copyright_layout = QHBoxLayout()
+        copyright_label = QLabel("版权由宁大科院所有")
+        copyright_label.setAlignment(Qt.AlignCenter)
+        copyright_label.setStyleSheet("color: #888; font-size: 12px;")
+        copyright_layout.addWidget(copyright_label)
+        right_layout.addLayout(copyright_layout)
+        
         # 分割器
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.toolbar)
