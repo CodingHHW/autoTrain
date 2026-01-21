@@ -67,16 +67,19 @@ class VideoRecorderThread(QThread):
     frame_signal = pyqtSignal(np.ndarray)
     finished_signal = pyqtSignal()
     
-    def __init__(self, fps=25, save_path="./videos", width=None, height=None):
+    def __init__(self, fps=25, save_path="./videos", width=None, height=None, auto_save_interval=5):
         super().__init__()
         self.fps = fps
         self.save_path = save_path
         self.width = width
         self.height = height
+        self.auto_save_interval = auto_save_interval  # 自动保存间隔（分钟）
         self.is_recording = False
         self.is_paused = False
         self.cap = None
         self.out = None
+        self.start_time = None  # 录制开始时间
+        self.current_file = None  # 当前录制的文件名
     
     def run(self):
         try:
@@ -101,16 +104,23 @@ class VideoRecorderThread(QThread):
             # 检查并创建保存目录
             ensure_path_exists(self.save_path)
             
-            # 生成文件名
-            # 使用时间戳生成文件名，格式：YYYYMMDD_HHMMSS.mp4
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join(self.save_path, f"record_{timestamp}.mp4")
+            # 初始化录制
+            def create_new_video_file():
+                # 生成文件名
+                # 使用时间戳生成文件名，格式：YYYYMMDD_HHMMSS.mp4
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = os.path.join(self.save_path, f"record_{timestamp}.mp4")
+                
+                # 创建视频写入对象
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                out = cv2.VideoWriter(filename, fourcc, self.fps, (width, height))
+                
+                logger.info(f"开始录制视频，保存路径：{filename}")
+                return out, filename
             
-            # 创建视频写入对象
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            self.out = cv2.VideoWriter(filename, fourcc, self.fps, (width, height))
-            
-            logger.info(f"开始录制视频，保存路径：{filename}")
+            # 创建第一个视频文件
+            self.out, self.current_file = create_new_video_file()
+            self.start_time = datetime.datetime.now()
             
             while self.is_recording:
                 if not self.is_paused:
@@ -118,6 +128,18 @@ class VideoRecorderThread(QThread):
                     if ret:
                         self.frame_signal.emit(frame)
                         self.out.write(frame)
+                        
+                        # 检查是否需要自动保存（切换到新文件）
+                        current_time = datetime.datetime.now()
+                        elapsed_minutes = (current_time - self.start_time).total_seconds() / 60
+                        if elapsed_minutes >= self.auto_save_interval:
+                            # 关闭当前视频文件
+                            self.out.release()
+                            logger.info(f"自动保存视频：{self.current_file}")
+                            
+                            # 创建新的视频文件
+                            self.out, self.current_file = create_new_video_file()
+                            self.start_time = current_time
             
             self.finished_signal.emit()
             logger.info("视频录制结束")
@@ -477,6 +499,15 @@ class MainWindow(QMainWindow):
         resolution_layout.addWidget(self.resolution_combo)
         param_layout.addLayout(resolution_layout)
         
+        # 自动保存间隔设置
+        auto_save_layout = QHBoxLayout()
+        auto_save_layout.addWidget(QLabel("自动保存间隔 (分钟):"))
+        self.auto_save_spin = QSpinBox()
+        self.auto_save_spin.setRange(1, 120)  # 1分钟到120分钟
+        self.auto_save_spin.setValue(5)  # 默认5分钟
+        auto_save_layout.addWidget(self.auto_save_spin)
+        param_layout.addLayout(auto_save_layout)
+        
         # 保存路径
         path_layout = QHBoxLayout()
         path_layout.addWidget(QLabel("保存路径:"))
@@ -750,7 +781,10 @@ class MainWindow(QMainWindow):
         width = int(width_str) if width_str != '0' else None
         height = int(height_str) if height_str != '0' else None
         
-        self.video_recorder = VideoRecorderThread(fps, save_path, width, height)
+        # 获取自动保存间隔（分钟）
+        auto_save_interval = self.auto_save_spin.value()
+        
+        self.video_recorder = VideoRecorderThread(fps, save_path, width, height, auto_save_interval)
         self.video_recorder.frame_signal.connect(self.update_video_frame)
         self.video_recorder.finished_signal.connect(self.video_recording_finished)
         self.video_recorder.start_recording()
