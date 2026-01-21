@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QGroupBox, QLabel, QLineEdit, QFileDialog, QSlider, 
     QSpinBox, QDoubleSpinBox, QProgressBar, QTextEdit, QMessageBox,
-    QSplitter, QComboBox
+    QSplitter, QComboBox, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QPixmap, QImage
@@ -400,6 +400,11 @@ class MainWindow(QMainWindow):
         self.video_label = QLabel("视频显示区域")
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setStyleSheet("border: 1px solid #ccc; background-color: #f0f0f0;")
+        
+        # 设置视频标签的初始大小和大小策略，避免窗口自动调整
+        self.video_label.setMinimumSize(640, 480)  # 设置最小大小
+        self.video_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # 允许扩展但不强制
+        
         right_layout.addWidget(self.video_label)
         
         # 状态显示
