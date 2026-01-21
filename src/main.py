@@ -79,7 +79,9 @@ class VideoRecorderThread(QThread):
         self.is_paused = False
         self.cap = None
         self.out = None
-        self.start_time = None  # 录制开始时间
+        self.start_time = None  # 总录制开始时间
+        self.total_recording_time = 0  # 总录制时间（秒）
+        self.current_segment_start = None  # 当前视频段开始时间
         self.current_file = None  # 当前录制的文件名
     
     def run(self):
@@ -122,8 +124,10 @@ class VideoRecorderThread(QThread):
             # 创建第一个视频文件
             self.out, self.current_file = create_new_video_file()
             self.start_time = datetime.datetime.now()
-            last_timer_update = datetime.datetime.now()
-            last_frame_time = datetime.datetime.now()
+            self.current_segment_start = self.start_time  # 当前视频段开始时间
+            self.total_recording_time = 0  # 总录制时间（秒）
+            last_timer_update = self.start_time
+            last_frame_time = self.start_time
             frame_interval = 1.0 / self.fps  # 每帧之间的时间间隔（秒）
             
             while self.is_recording:
@@ -142,25 +146,32 @@ class VideoRecorderThread(QThread):
                             last_frame_time = current_time
                         
                         # 检查是否需要自动保存（切换到新文件）
-                        elapsed_minutes = (current_time - self.start_time).total_seconds() / 60
-                        if elapsed_minutes >= self.auto_save_interval:
+                        segment_elapsed_minutes = (current_time - self.current_segment_start).total_seconds() / 60
+                        if segment_elapsed_minutes >= self.auto_save_interval:
                             # 关闭当前视频文件
                             self.out.release()
                             logger.info(f"自动保存视频：{self.current_file}")
                             
+                            # 计算当前视频段的录制时间，并累加到总录制时间中
+                            segment_elapsed_seconds = (current_time - self.current_segment_start).total_seconds()
+                            self.total_recording_time += segment_elapsed_seconds
+                            
                             # 创建新的视频文件
                             self.out, self.current_file = create_new_video_file()
-                            self.start_time = current_time
+                            self.current_segment_start = current_time
                     
                     # 每秒更新一次计时
                     current_time = datetime.datetime.now()
                     if (current_time - last_timer_update).total_seconds() >= 1:
-                        # 计算已录制时间
-                        elapsed = current_time - self.start_time
+                        # 计算已录制时间（总录制时间 + 当前视频段的录制时间）
+                        segment_elapsed_seconds = (current_time - self.current_segment_start).total_seconds()
+                        total_elapsed_seconds = self.total_recording_time + segment_elapsed_seconds
+                        
                         # 格式化为HH:MM:SS
-                        hours, remainder = divmod(elapsed.total_seconds(), 3600)
+                        hours, remainder = divmod(total_elapsed_seconds, 3600)
                         minutes, seconds = divmod(remainder, 60)
                         timer_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
+                        
                         # 发送计时信号
                         self.timer_signal.emit(timer_str)
                         last_timer_update = current_time
