@@ -25,23 +25,29 @@ logger.add("logs/app.log", rotation="500 MB", level="INFO", encoding="utf-8")
 def get_default_save_path(subdir=None):
     """
     根据操作系统类型获取默认保存路径
-    - macOS/Linux: 系统临时目录
-    - Windows: D盘根目录
+    - macOS/Linux: 系统临时目录下面的test文件夹
+    - Windows: D盘下面的test文件夹
     """
     platform = sys.platform
     
     if platform.startswith('win'):
-        # Windows系统，使用D盘根目录
-        base_path = "D:/"
+        # Windows系统，使用D盘下的test文件夹
+        base_path = "D:/test"
     else:
-        # macOS或Linux系统，使用系统临时目录
-        base_path = tempfile.gettempdir()
+        # macOS或Linux系统，使用系统临时目录下的test文件夹
+        base_path = os.path.join(tempfile.gettempdir(), "test")
+    
+    # 自动创建必要的子文件夹
+    required_folders = ["videos", "images", "labels", "train_result", "dataset"]
+    for folder in required_folders:
+        folder_path = os.path.join(base_path, folder)
+        ensure_path_exists(folder_path)
     
     # 如果指定了子目录，则拼接完整路径
     if subdir:
-        base_path = os.path.join(base_path, subdir)
-    
-    return base_path
+        return os.path.join(base_path, subdir)
+    else:
+        return base_path
 
 # 检查并创建路径
 def ensure_path_exists(path):
@@ -420,7 +426,7 @@ class MainWindow(QMainWindow):
         self.yolo_trainer = None
     
     def init_ui(self):
-        self.setWindowTitle("视频处理与模型训练集成软件")
+        self.setWindowTitle("自动训练软件")
         # 设置固定窗口尺寸
         self.setGeometry(100, 100, 1200, 800)
         # 窗口状态标志
@@ -433,6 +439,31 @@ class MainWindow(QMainWindow):
         # 创建左侧工具栏
         self.toolbar = QWidget()
         toolbar_layout = QVBoxLayout(self.toolbar)
+        
+        # 项目根目录设置
+        root_layout = QVBoxLayout()
+        root_group = QGroupBox("项目根目录")
+        root_group_layout = QHBoxLayout(root_group)
+        
+        # 根目录路径显示
+        root_group_layout.addWidget(QLabel("根目录:"))
+        self.root_path = QLineEdit(get_default_save_path())
+        self.root_path.setReadOnly(True)
+        root_group_layout.addWidget(self.root_path)
+        
+        # 刷新按钮
+        refresh_btn = QPushButton("刷新")
+        refresh_btn.clicked.connect(self.refresh_root_path)
+        root_group_layout.addWidget(refresh_btn)
+        
+        # 提示信息
+        tip_label = QLabel("自动创建: videos, images, labels, train_result, dataset")
+        tip_label.setStyleSheet("font-size: 10px; color: #666;")
+        root_group_layout.addWidget(tip_label)
+        
+        root_group_layout.setStretchFactor(self.root_path, 1)
+        root_layout.addWidget(root_group)
+        toolbar_layout.addLayout(root_layout)
         
         # 创建视频录制模块
         self.create_video_recording_module(toolbar_layout)
@@ -869,6 +900,10 @@ class MainWindow(QMainWindow):
     def update_timer_display(self, timer_str):
         # 更新UI上的计时显示
         self.timer_label.setText(timer_str)
+    
+    def refresh_root_path(self):
+        # 刷新项目根目录显示
+        self.root_path.setText(get_default_save_path())
     
     def update_video_frame(self, frame):
         # 转换OpenCV帧到Qt图像
