@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# 软件版本信息
+VERSION = "1.0.0"
+
 import sys
 import os
 import tempfile
@@ -426,7 +429,7 @@ class MainWindow(QMainWindow):
         self.yolo_trainer = None
     
     def init_ui(self):
-        self.setWindowTitle("自动训练软件")
+        self.setWindowTitle(f"自动训练软件 v{VERSION}")
         # 设置固定窗口尺寸
         self.setGeometry(100, 100, 1200, 800)
         # 窗口状态标志
