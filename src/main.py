@@ -443,25 +443,36 @@ class MainWindow(QMainWindow):
         # 项目根目录设置
         root_layout = QVBoxLayout()
         root_group = QGroupBox("项目根目录")
-        root_group_layout = QHBoxLayout(root_group)
+        root_group_layout = QVBoxLayout(root_group)
         
-        # 根目录路径显示
-        root_group_layout.addWidget(QLabel("根目录:"))
+        # 根目录路径显示和编辑
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("根目录:"))
         self.root_path = QLineEdit(get_default_save_path())
-        self.root_path.setReadOnly(True)
-        root_group_layout.addWidget(self.root_path)
+        path_layout.addWidget(self.root_path)
+        
+        # 保存和刷新按钮
+        button_layout = QHBoxLayout()
+        
+        # 保存按钮
+        save_btn = QPushButton("保存")
+        save_btn.clicked.connect(self.save_root_path)
+        button_layout.addWidget(save_btn)
         
         # 刷新按钮
         refresh_btn = QPushButton("刷新")
         refresh_btn.clicked.connect(self.refresh_root_path)
-        root_group_layout.addWidget(refresh_btn)
+        button_layout.addWidget(refresh_btn)
+        
+        path_layout.addLayout(button_layout)
+        root_group_layout.addLayout(path_layout)
         
         # 提示信息
         tip_label = QLabel("自动创建: videos, images, labels, train_result, dataset")
         tip_label.setStyleSheet("font-size: 10px; color: #666;")
         root_group_layout.addWidget(tip_label)
         
-        root_group_layout.setStretchFactor(self.root_path, 1)
+        path_layout.setStretchFactor(self.root_path, 1)
         root_layout.addWidget(root_group)
         toolbar_layout.addLayout(root_layout)
         
@@ -904,6 +915,42 @@ class MainWindow(QMainWindow):
     def refresh_root_path(self):
         # 刷新项目根目录显示
         self.root_path.setText(get_default_save_path())
+    
+    def save_root_path(self):
+        # 保存用户设置的根目录路径
+        new_root = self.root_path.text()
+        
+        # 确保路径存在
+        ensure_path_exists(new_root)
+        
+        # 自动创建必要的子文件夹
+        required_folders = ["videos", "images", "labels", "train_result", "dataset"]
+        for folder in required_folders:
+            folder_path = os.path.join(new_root, folder)
+            ensure_path_exists(folder_path)
+        
+        # 更新所有相关模块的路径设置
+        self.update_all_module_paths(new_root)
+        
+        # 显示成功提示
+        QMessageBox.information(self, "提示", f"项目根目录已保存：{new_root}")
+    
+    def update_all_module_paths(self, new_root):
+        # 更新视频录制模块路径
+        self.video_save_path.setText(os.path.join(new_root, "videos"))
+        
+        # 更新图像提取模块路径
+        self.video_file_path.setText(os.path.join(new_root, "videos"))
+        self.image_save_path.setText(os.path.join(new_root, "images"))
+        
+        # 更新数据标注模块路径
+        self.annotation_img_path.setText(os.path.join(new_root, "images"))
+        self.annotation_lbl_path.setText(os.path.join(new_root, "labels"))
+        
+        # 更新数据集切分模块路径
+        self.split_img_path.setText(os.path.join(new_root, "images"))
+        self.split_lbl_path.setText(os.path.join(new_root, "labels"))
+        self.split_output_path.setText(os.path.join(new_root, "dataset"))
     
     def update_video_frame(self, frame):
         # 转换OpenCV帧到Qt图像
