@@ -429,7 +429,7 @@ class MainWindow(QMainWindow):
         self.yolo_trainer = None
     
     def init_ui(self):
-        self.setWindowTitle(f"自动训练软件 v{VERSION}")
+        self.setWindowTitle(f"智视训练系统 v{VERSION}")
         # 设置固定窗口尺寸
         self.setGeometry(100, 100, 1200, 800)
         # 窗口状态标志
